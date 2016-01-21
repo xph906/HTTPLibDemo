@@ -20,9 +20,13 @@ public class MyHTTPClient {
         this.handler = handler;
     }
 
-    public void startNewRequest(String method, String url){
-        HTTPRunnable runnable = new HTTPRunnable(method, url, handler);
+    public void loadString(String url){
+        HTTPRunnable runnable = new HTTPRunnable( url, handler,HTTPRunnable.HTTPTaskType.STRING);
         (new Thread(runnable)).start();
     }
 
+    public void loadImage(String url){
+        HTTPRunnable runnable = new HTTPRunnable(url, handler,HTTPRunnable.HTTPTaskType.IMAGE);
+        (new Thread(runnable)).start();
+    }
 }
