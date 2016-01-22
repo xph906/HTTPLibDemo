@@ -41,6 +41,15 @@ public class HTTPRunnable implements Runnable {
         BINARY
     }
 
+    public class ImageMsg{
+        public String comments;
+        public Bitmap map;
+        public ImageMsg(String c, Bitmap b){
+            this.comments = c;
+            this.map = b;
+        }
+    }
+
     public HTTPRunnable(String url, Handler handler, HTTPTaskType type){
         this.url = url;
         this.handler = handler;
@@ -138,15 +147,17 @@ public class HTTPRunnable implements Runnable {
             sb.append(String.format(
                     "Overall:%dms dns:%dms, size:%d, connSetup:%dms (handshake:%dms), " +
                             "server:%dms, resp:%dms (1.reqwrite:%dms 2.TTFB:%dms, 3.respTrans:%dms ) \n for URL:%s\n",
-                    overallDelay, bitmap.getByteCount(), dnsDelay, connSetupDelay,
+                    overallDelay, dnsDelay, bitmap.getByteCount(), connSetupDelay,
                     timing.getHandshakeTimeANP(), timing.getEstimatedServerDelay(), respDelay, reqWriteDelay,  TTFB, respTransDelay, curURL));
+            System.err.println("dns_starttime:"+timing.getDnsEndTimeANP()+
+                    " dns_ebdtime:"+timing.getDnsStartTimeANP());
         }
 
         LOGGER.info("get image: " + bitmap.getByteCount()+" bytes");
         Message msg = new Message();
 
         msg.what = MainActivity.MSGType.IMAGE_MSG;
-        msg.obj = bitmap;
+        msg.obj = new ImageMsg(sb.toString(), bitmap);
         handler.sendMessage(msg);
         LOGGER.info("");
     }

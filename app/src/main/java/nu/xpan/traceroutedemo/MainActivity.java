@@ -1,11 +1,14 @@
 package nu.xpan.traceroutedemo;
 
+import android.graphics.Bitmap;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,6 +33,8 @@ public class MainActivity extends ActionBarActivity {
     android.widget.Button start_button, http_button, net_button, img_button;
     EditText ip_view;
     TextView result_view;
+    ImageView image_view;
+    ScrollView text_sview, image_sview;
     String method;
     TraceRoute traceroute;
     Handler handler;
@@ -46,11 +51,17 @@ public class MainActivity extends ActionBarActivity {
         img_button = (android.widget.Button)findViewById(R.id.image_button);
         ip_view = (android.widget.EditText)findViewById(R.id.ip_text);
         result_view = (TextView)findViewById(R.id.result_text);
+        image_view = (ImageView)findViewById(R.id.image_view);
+        text_sview = (ScrollView)findViewById(R.id.text_scroll_view);
+        image_sview = (ScrollView)findViewById(R.id.image_scroll_view);
+
+        //image_sview.setVisibility(View.INVISIBLE);
 
         util = new NetUtility(getApplicationContext());
 
         handler = new Handler(Looper.getMainLooper()) {
             String contents;
+            HTTPRunnable.ImageMsg imageMsg;
             @Override
             public void handleMessage(Message inputMessage) {
                 switch (inputMessage.what){
@@ -61,6 +72,15 @@ public class MainActivity extends ActionBarActivity {
                     case MSGType.HTTPRESPONSE_MSG:
                         contents = (String)inputMessage.obj;
                         result_view.append(contents+"\n");
+                        break;
+                    case MSGType.IMAGE_MSG:
+                        imageMsg = (HTTPRunnable.ImageMsg)inputMessage.obj;
+                        String rs = String.format(
+                                "get image with size:%dbytes\n timing info: %s",
+                                imageMsg.map.getByteCount(),imageMsg.comments);
+                        result_view.append(rs+"\n");
+                        image_view.setImageBitmap(imageMsg.map);
+
                         break;
                     case MSGType.ERROR_MSG:
                         contents = (String)inputMessage.obj;
@@ -116,7 +136,7 @@ public class MainActivity extends ActionBarActivity {
                         "type       :   %s\n",
                         netType
                 );
-                result_view.setText(connectedText+typeText);
+                result_view.setText(connectedText + typeText);
             }
         });
 

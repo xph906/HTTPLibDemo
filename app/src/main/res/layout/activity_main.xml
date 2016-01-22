@@ -25,12 +25,12 @@
             android:layout_height="wrap_content"
             android:text="Trace"
             android:id="@+id/trace_button"/>
-
         <Button
+            android:text="NetInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="HTTP"
-            android:id="@+id/http_button"/>
+            android:id="@+id/netinfo_button"/>
+
     </LinearLayout>
     <LinearLayout
         android:paddingBottom="20dp"
@@ -38,11 +38,11 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
         <Button
-            android:text="Networking Info"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:id="@+id/netinfo_button"/>
+            android:text="HTTP"
+            android:id="@+id/http_button"/>
         <Button
             android:text="Image"
             android:layout_width="0dp"
@@ -51,10 +51,12 @@
             android:id="@+id/image_button"/>
     </LinearLayout>
 
+
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/scrollView"
+        android:layout_weight="1"
+        android:layout_height="0dp"
+        android:id="@+id/text_scroll_view"
         android:layout_gravity="center_horizontal" >
 
         <TextView
@@ -63,7 +65,27 @@
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:text="Results"
             android:id="@+id/result_text" />
+
     </ScrollView>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_weight="1"
+        android:layout_height="0dp"
+        android:id="@+id/image_scroll_view"
+        android:layout_gravity="center_horizontal" >
+
+        <ImageView
+            android:id="@+id/image_view"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:scaleType="centerInside"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:layout_marginTop="10sp"
+            android:contentDescription="Image will be here"
+            />
+    </ScrollView>
+
 
 
 </LinearLayout>
