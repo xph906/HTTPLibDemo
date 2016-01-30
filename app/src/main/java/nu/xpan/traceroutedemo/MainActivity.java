@@ -21,6 +21,7 @@ public class MainActivity extends ActionBarActivity {
         public final static int HTTPRESPONSE_MSG = 2;
         public final static int ERROR_MSG = 3;
         public final static int IMAGE_MSG = 4;
+        public final static int NETINFO_MSG = 5;
     }
     private static String HTTP_LOG_TAG = "NETDEMO";
     public static final Logger logger = Logger.getLogger(HTTP_LOG_TAG);
@@ -55,10 +56,6 @@ public class MainActivity extends ActionBarActivity {
         text_sview = (ScrollView)findViewById(R.id.text_scroll_view);
         image_sview = (ScrollView)findViewById(R.id.image_scroll_view);
 
-        //image_sview.setVisibility(View.INVISIBLE);
-
-        util = new NetUtility(getApplicationContext());
-
         handler = new Handler(Looper.getMainLooper()) {
             String contents;
             HTTPRunnable.ImageMsg imageMsg;
@@ -80,11 +77,17 @@ public class MainActivity extends ActionBarActivity {
                                 imageMsg.map.getByteCount(),imageMsg.comments);
                         result_view.append(rs+"\n");
                         image_view.setImageBitmap(imageMsg.map);
-
                         break;
                     case MSGType.ERROR_MSG:
                         contents = (String)inputMessage.obj;
                         result_view.append(contents+"\n");
+                        break;
+                    case MSGType.NETINFO_MSG:
+                        String old_content = result_view.getText().toString();
+                        contents = (String)inputMessage.obj;
+                        result_view.setText("");
+                        result_view.append(contents+"\n");
+                        result_view.append(old_content);
                         break;
                     default:
                         super.handleMessage(inputMessage);
@@ -92,7 +95,7 @@ public class MainActivity extends ActionBarActivity {
             }
         };
         client = new MyHTTPClient(handler);
-
+        util = new NetUtility(getApplicationContext(), handler);
 
         traceroute = new TraceRoute(getApplicationContext(),timeout, handler);
         if(!traceroute.isInstalled()) {
@@ -143,7 +146,7 @@ public class MainActivity extends ActionBarActivity {
         img_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String url = "http://52.11.26.222:3000/image-large";
+                String url = "http://garuda.cs.northwestern.edu:3000/image-large";
                 logger.log(Level.INFO, "start request image:" + url);
                 client.loadImage(url);
                 logger.log(Level.INFO, "done loading image  ...");
