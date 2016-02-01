@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.Message;
 
@@ -13,16 +15,16 @@ import java.util.logging.Level;
 
 import static nu.xpan.traceroutedemo.MainActivity.logger;
 
-/**
- * Created by xpan on 1/18/16.
- */
 public class NetUtility {
     private Context mContext;
     private boolean mListening; //whether monitoring connection changes
     private boolean mIsFailover;
     private State mState;
-    private NetworkInfo mNetworkInfo, mOtherNetworkInfo;
+    private NetworkInfo.DetailedState mDetailedState;
+    private String mType;
+    private String mName;
     private String mReason;
+    private NetworkInfo mNetworkInfo, mOtherNetworkInfo;
     private ConnectivityBroadcastReceiver mReceiver;
     private Handler handler;
 
@@ -35,6 +37,7 @@ public class NetUtility {
         this.mIsFailover = false;
         this.mReceiver = new ConnectivityBroadcastReceiver();
         this.handler = handler;
+        this.mName = null;
         this.startListening();
         logger.log(Level.INFO, "testing if logger works...");
     }
@@ -45,11 +48,10 @@ public class NetUtility {
         NOT_CONNECTED,
         CONNECTING
     };
+
     public enum Type {
       WIFI,
-      TwoG,
-      ThreeG,
-      FourG
+      CELLULAR
     };
 
     private class ConnectivityBroadcastReceiver extends BroadcastReceiver {
@@ -65,17 +67,15 @@ public class NetUtility {
             boolean noConnectivity =
                     intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
             mReason = intent.getStringExtra(ConnectivityManager.EXTRA_REASON);
-            Message msg = new Message();
-            msg.what = MainActivity.MSGType.NETINFO_MSG;
 
             if (noConnectivity) {
                 logger.log(Level.INFO, "Network disconnected: ");
                 mState = State.NOT_CONNECTED;
+                mName = null;
                 String msg_obj = String.format(
                     "NetworkingState Updated: %s (%s)\n",
                     mState, mReason==null ? "" : mReason);
-                msg.obj = msg_obj;
-                handler.sendMessage(msg);
+                postMessage(InternalConst.MSGType.NETINFO_MSG, msg_obj);
                 logger.log(Level.INFO, "Sent NetworkingInfo update msg: "+msg_obj);
                 return;
             }
@@ -87,8 +87,7 @@ public class NetUtility {
                 String msg_obj = String.format(
                         "NetworkingState Updated Error: %s (%s)\n",
                         "mNetworkInfo is null", mState);
-                msg.obj = msg_obj;
-                handler.sendMessage(msg);
+                postMessage(InternalConst.MSGType.NETINFO_MSG, msg_obj);
                 logger.log(Level.INFO, "Sent NetworkingInfo update msg: "+msg_obj);
                 return;
             }
@@ -99,34 +98,41 @@ public class NetUtility {
                     intent.getBooleanExtra(ConnectivityManager.EXTRA_IS_FAILOVER, false);
 
             String subType = mNetworkInfo.getSubtypeName();
-            String type = mNetworkInfo.getTypeName();
+            mType = mNetworkInfo.getTypeName();
             boolean isConnected = mNetworkInfo.isConnected();
             boolean isConnecting = mNetworkInfo.isConnectedOrConnecting();
 
             if(isConnected){
-                logger.log(Level.INFO, "Network connected: "+type+"/"+subType);
+                logger.log(Level.INFO, "Network connected: "+mType+"/"+subType);
                 mState = State.CONNECTED;
             }
             else if(isConnecting){
-                logger.log(Level.INFO, "Network connecting: "+type+'/'+subType);
+                logger.log(Level.INFO, "Network connecting: "+mType+'/'+subType);
                 mState = State.CONNECTING;
             }
+
+            // update type and name
+            if(isConnected &&
+                    mNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI){
+                mName = fetchWIFIName();
+                subType = mName;
+                logger.log(Level.INFO, "WIFI name: "+mName);
+
+            }
+            else if(isConnected){
+                mName = subType;
+            }
+
+            //update log information
             StringBuilder sb = new StringBuilder();
             sb.append(String.format(
                 "NetworkingState Updated: %s\n",
                     mState));
             sb.append(String.format(
                     "  Type: %s \n  Subtype %s\n",
-                    type,subType));
-
-            msg.obj = sb.toString();
-            handler.sendMessage(msg);
+                    mType, subType));
+            postMessage(InternalConst.MSGType.NETINFO_MSG, sb.toString());
             logger.log(Level.INFO, "Sent NetworkingInfo update msg: "+sb.toString());
-            /*logger.log(Level.INFO,
-                    " onReceive(): mNetworkInfo=" + mNetworkInfo + "\n mOtherNetworkInfo = "
-                    + (mOtherNetworkInfo == null ? "[none]" : mOtherNetworkInfo +
-                    "\n noConn=" + noConnectivity) + "\n mState=" + mState.toString() +
-                    "\n isFailOver=" + mIsFailover + "\n reason=" + mReason);*/
         }
     };
 
@@ -151,17 +157,27 @@ public class NetUtility {
         }
     }
 
+    private String fetchWIFIName(){
+        WifiManager manager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
+        if (manager.isWifiEnabled()) {
+            WifiInfo wifiInfo = manager.getConnectionInfo();
+            if (wifiInfo != null) {
+                NetworkInfo.DetailedState state = WifiInfo.getDetailedStateOf(wifiInfo.getSupplicantState());
+                if (state == NetworkInfo.DetailedState.CONNECTED ||
+                        state == NetworkInfo.DetailedState.OBTAINING_IPADDR) {
+                    return wifiInfo.getSSID();
+                }
+            }
+        }
+        return null;
+    }
+
+    public String getNetworkingName(){
+        return mName;
+    }
+
     public boolean isConnected(){
-        ConnectivityManager cm =
-                (ConnectivityManager)mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null &&
-                activeNetwork.isConnectedOrConnecting();
-        if(isConnected)
-            mState = State.CONNECTED;
-        else
-            mState = State.NOT_CONNECTED;
-        return isConnected;
+        return mState == State.CONNECTED;
     }
 
     public boolean isUsingWIFI(){
@@ -176,8 +192,19 @@ public class NetUtility {
         return isWIFI;
     }
 
-    public String getNetworkName(){
+    public String getDetailedState(){
+        ConnectivityManager cm =
+                (ConnectivityManager)mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo info = cm.getActiveNetworkInfo();
+        //NetworkInfo.DetailedState state =
         return "";
+    }
+
+    private void postMessage(int msgType, String content){
+        Message msg = new Message();
+        msg.what = msgType;
+        msg.obj = content;
+        handler.sendMessage(msg);
     }
 
 }

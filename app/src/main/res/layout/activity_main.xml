@@ -41,8 +41,14 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="HTTP"
-            android:id="@+id/http_button"/>
+            android:text="CNN"
+            android:id="@+id/http_cnn_button"/>
+        <Button
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="DOUBAN"
+            android:id="@+id/http_douban_button"/>
         <Button
             android:text="Image"
             android:layout_width="0dp"

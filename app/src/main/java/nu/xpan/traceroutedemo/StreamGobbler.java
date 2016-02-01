@@ -47,7 +47,7 @@ class StreamGobbler
             {
                 System.out.println(streamType + ">" + line);
                 Message msg = new Message();
-                msg.what = MainActivity.MSGType.TRACEROUTE_MSG;
+                msg.what = InternalConst.MSGType.TRACEROUTE_MSG;
                 msg.obj = line;
                 handler.sendMessage(msg);
                 System.out.println("done sending the msg");
