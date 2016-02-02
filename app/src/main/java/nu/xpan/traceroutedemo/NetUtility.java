@@ -10,29 +10,41 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.Message;
+import android.telephony.CellInfoGsm;
+import android.telephony.CellSignalStrengthGsm;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
+import android.telephony.TelephonyManager;
+import android.telephony.gsm.GsmCellLocation;
 
 import java.util.logging.Level;
 
 import static nu.xpan.traceroutedemo.MainActivity.logger;
 
 public class NetUtility extends PhoneStateListener {
+    private State mState;
+    private String mType;
+    private String mName;
+    private int mWIFISignalLevel;
+    private int mCellSignalLevel;
+    private int mMCC;   // mobile network code
+    private int mMNC;   // mobile country code
+    private int mLAC;   // local area code
+    private String mIMEI;
+
     private Context mContext;
     private boolean mListening; //whether monitoring connection changes
     private boolean mIsFailover;
-    private State mState;
     private NetworkInfo.DetailedState mDetailedState;
-    private String mType;
-    private String mName;
+    private int mCellularType;
     private String mReason;
     private NetworkInfo mNetworkInfo, mOtherNetworkInfo;
     private ConnectivityBroadcastReceiver mReceiver;
     private Handler handler;
     private int mCellSignalStrength;
-    private int mCellSignalLevel;
     private int mWIFISignalStrength;
-    private int mWIFISignalLevel;
+    private TelephonyManager mTelManager;
+    private SignalStrength mSignalStrength;
 
 
     public NetUtility(Context cx, Handler handler){
@@ -48,7 +60,9 @@ public class NetUtility extends PhoneStateListener {
         this.startListening();
         this.mCellSignalStrength = 0;
         this.mWIFISignalStrength = 0;
-        logger.log(Level.INFO, "testing if logger works...");
+        mTelManager = (TelephonyManager)mContext.getSystemService(Context.TELEPHONY_SERVICE);
+        mTelManager.listen(this, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+
     }
 
     public String getNetworkingState(){
@@ -125,6 +139,7 @@ public class NetUtility extends PhoneStateListener {
             }
             else if(isConnected){
                 mName = subType;
+                mCellularType = mTelManager.getNetworkType();
             }
 
             //update log information
@@ -138,17 +153,39 @@ public class NetUtility extends PhoneStateListener {
     @Override
     public void onSignalStrengthsChanged(SignalStrength signalStrength) {
         super.onSignalStrengthsChanged(signalStrength);
-        mCellSignalStrength = signalStrength.getGsmSignalStrength();
-
-        mCellSignalLevel = (2 * mCellSignalStrength) - 113; // -> dBm
-        logger.info(String.format("Cell signal strength : %d(%d)",
-                mCellSignalStrength, mCellSignalLevel));
+        mSignalStrength = signalStrength;
     }
-    public int getCellSignalStrength(){
-        mCellSignalLevel = (2 * mCellSignalStrength) - 113; // -> dBm
-        logger.info(String.format("Cell signal strength : %d(%d)",
-                mCellSignalStrength, mCellSignalLevel));
-        return mCellSignalStrength;
+
+    public String getIMEI(){
+        GsmCellLocation location = (GsmCellLocation) mTelManager.getCellLocation();
+        mIMEI = mTelManager.getDeviceId();
+        return mIMEI;
+    }
+
+    public int getLAC(){
+        GsmCellLocation location = (GsmCellLocation) mTelManager.getCellLocation();
+        mLAC = location.getLac();
+        return mLAC;
+    }
+
+    public int getMCC(){
+        String networkOperator = mTelManager.getNetworkOperator();
+
+        if (networkOperator != null) {
+            mMCC = Integer.valueOf(networkOperator.substring(0, 3));
+            return mMCC;
+        }
+        return 0;
+    }
+
+    public int getMNC(){
+        String networkOperator = mTelManager.getNetworkOperator();
+
+        if (networkOperator != null) {
+            mMNC = Integer.valueOf(networkOperator.substring(3));
+            return mMNC;
+        }
+        return 0;
     }
 
     public int getWIFISignalStrength(){
@@ -159,13 +196,15 @@ public class NetUtility extends PhoneStateListener {
         mWIFISignalLevel  = WifiManager.calculateSignalLevel(mWIFISignalStrength, numberOfLevels);
         logger.info(String.format("WIFI signal strength: %d (%d)",
                 mWIFISignalStrength, mWIFISignalLevel));
-        return mWIFISignalStrength;
+        return mWIFISignalLevel;
     }
 
     public String toString(){
-        return String.format("State : %s\nType  : %s\nName  : %s\nWIFISig: %d\nCELLSig: %d\n",
+        return String.format("State : %s\nType  : %s\nName  : %s\nWIFISig: %d\nCELLSig: %d\n" +
+                "LAC   :%d\nMNC   :%d\nMCC   :%d\nIMEI:   %s\n",
                 getNetworkingState(), getNetworkingType(), getNetworkingName(),
-                getWIFISignalStrength(), getCellSignalStrength());
+                getWIFISignalStrength(), getCellSignalStrength(),
+                getLAC(), getMNC(), getMCC(), getIMEI());
     }
     public synchronized void startListening() {
         if (!mListening) {
@@ -203,6 +242,62 @@ public class NetUtility extends PhoneStateListener {
         return null;
     }
 
+    private int getCellSignalStrength2(){
+        try {
+            TelephonyManager telephonyManager =
+                    (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
+            System.err.println("getAllCellInfo:" + telephonyManager.getNeighboringCellInfo().size());
+            CellInfoGsm cellinfogsm = (CellInfoGsm) telephonyManager.getAllCellInfo().get(0);
+            CellSignalStrengthGsm cellSignalStrengthGsm = cellinfogsm.getCellSignalStrength();
+            return cellSignalStrengthGsm.getDbm();
+        }
+        catch(Exception e){
+            logger.severe("issue getting signal strength: "+e);
+            return 0;
+        }
+
+
+    }
+
+    private int getCellSignalStrength()
+    {
+        int dbm = 0;
+        if(mCellularType == TelephonyManager.NETWORK_TYPE_LTE)
+        {
+            String ssignal = mSignalStrength.toString();
+            String[] parts = ssignal.split(" ");
+            int asu = Integer.parseInt(parts[8]);
+            dbm = asu*2-113;
+            logger.info("Prophet:phoneInfo " + "LTE:"+dbm);
+        }
+        else if(mCellularType == TelephonyManager.NETWORK_TYPE_CDMA
+                || mCellularType == TelephonyManager.NETWORK_TYPE_1xRTT )
+        {
+            dbm = mSignalStrength.getCdmaDbm();
+            logger.info("Prophet:phoneInfo " + "CDMA:"+dbm);
+        }
+        else if(mCellularType == TelephonyManager.NETWORK_TYPE_EVDO_0
+                || mCellularType == TelephonyManager.NETWORK_TYPE_EVDO_A
+                || mCellularType == TelephonyManager.NETWORK_TYPE_EVDO_B)
+        {
+
+            dbm = mSignalStrength.getEvdoDbm();
+            logger.info("Prophet:phoneInfo "+"EVDO:"+dbm);
+        }
+        else if(mSignalStrength.isGsm())
+        {
+            int asu = mSignalStrength.getGsmSignalStrength();
+            dbm = asu*2-113;
+            logger.info("Prophet:phoneInfo "+"GSM:"+dbm);
+        }
+        else{
+            dbm = -113;
+        }
+
+        WifiManager wifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
+        mCellSignalLevel  = WifiManager.calculateSignalLevel(dbm, 5);
+        return mCellSignalLevel;
+    }
 
 
     //TODO: not implemented

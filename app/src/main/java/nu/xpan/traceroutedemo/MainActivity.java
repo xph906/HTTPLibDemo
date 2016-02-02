@@ -1,8 +1,11 @@
 package nu.xpan.traceroutedemo;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.telephony.PhoneStateListener;
+import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -28,8 +31,8 @@ public class MainActivity extends ActionBarActivity {
     }
 
     android.widget.Button start_button, net_button, img_button;
-    Button http_cnn_button,http_douban_button;
-    EditText ip_view;
+    Button http_cnn_button,http_douban_button, crop_button;
+    EditText ip_view, x_view, y_view, width_view, height_view;
     TextView result_view;
     ImageView image_view;
     ScrollView text_sview, image_sview;
@@ -38,6 +41,7 @@ public class MainActivity extends ActionBarActivity {
     Handler handler;
     MyHTTPClient client;
     NetUtility util;
+    ImageProcessor imageProcessor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +57,14 @@ public class MainActivity extends ActionBarActivity {
         image_view = (ImageView)findViewById(R.id.image_view);
         text_sview = (ScrollView)findViewById(R.id.text_scroll_view);
         image_sview = (ScrollView)findViewById(R.id.image_scroll_view);
+
+        x_view = (EditText)findViewById(R.id.x_text);
+        y_view = (EditText)findViewById(R.id.y_text);
+        width_view = (EditText)findViewById(R.id.width_text);
+        height_view = (EditText)findViewById(R.id.height_text);
+        crop_button = (android.widget.Button)findViewById(R.id.crop_button);
+
+        imageProcessor = new ImageProcessor();
 
         TelephonyManager mTelephony = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         String userid = mTelephony.getDeviceId();
@@ -148,10 +160,24 @@ public class MainActivity extends ActionBarActivity {
         img_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String url = "http://garuda.cs.northwestern.edu:3000/image-large";
+               /* String url = "http://garuda.cs.northwestern.edu:3000/image-large";
                 logger.log(Level.INFO, "start request image:" + url);
                 client.loadImage(url);
-                logger.log(Level.INFO, "done loading image  ...");
+                logger.log(Level.INFO, "done loading image  ...");*/
+                Bitmap b = imageProcessor.readImage("/sdcard/pictures/Screenshots/3.jpeg");
+                image_view.setImageBitmap(b);
+            }
+        });
+        crop_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                int x = Integer.valueOf(x_view.getText().toString());
+                int y = Integer.valueOf(y_view.getText().toString());
+                int width = Integer.valueOf(width_view.getText().toString());
+                int height = Integer.valueOf(height_view.getText().toString());
+
+                Bitmap b = imageProcessor.corp(x,y,width,height);
+                image_view.setImageBitmap(b);
             }
         });
     }
