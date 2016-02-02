@@ -1,7 +1,9 @@
 package nu.xpan.traceroutedemo;
 
+import android.content.Context;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.telephony.TelephonyManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -52,6 +54,10 @@ public class MainActivity extends ActionBarActivity {
         text_sview = (ScrollView)findViewById(R.id.text_scroll_view);
         image_sview = (ScrollView)findViewById(R.id.image_scroll_view);
 
+        TelephonyManager mTelephony = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        String userid = mTelephony.getDeviceId();
+        System.err.println("DEBUG userid: "+userid);
+
         handler = new Handler(Looper.getMainLooper()) {
             String contents;
             HTTPRunnable.ImageMsg imageMsg;
@@ -90,7 +96,7 @@ public class MainActivity extends ActionBarActivity {
                 }
             }
         };
-        client = new MyHTTPClient(handler);
+        client = new MyHTTPClient(getApplicationContext(), handler);
         util = new NetUtility(getApplicationContext(), handler);
 
         traceroute = new TraceRoute(getApplicationContext(),timeout, handler);
@@ -133,19 +139,9 @@ public class MainActivity extends ActionBarActivity {
         net_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                result_view.setText("");
-                String netType = util.isUsingWIFI()? "WIFI" : "Cellular";
-                if(!util.isConnected()){
-                    netType = "None";
-                }
-                String connectedText = String.format(
-                        "isConnected:   %b\n",
-                        util.isConnected());
-                String typeText = String.format(
-                        "type       :   %s\n",
-                        netType
-                );
-                result_view.setText(connectedText + typeText);
+               // result_view.setText("");
+
+                result_view.setText(util.toString());
             }
         });
 

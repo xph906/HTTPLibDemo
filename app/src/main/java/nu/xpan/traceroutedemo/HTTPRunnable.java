@@ -1,5 +1,6 @@
 package nu.xpan.traceroutedemo;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Message;
@@ -34,6 +35,7 @@ public class HTTPRunnable implements Runnable {
     private String method;
     private Handler handler;
     private HTTPTaskType taskType;
+    private Context context;
 
     public enum HTTPTaskType{
         IMAGE,
@@ -50,14 +52,15 @@ public class HTTPRunnable implements Runnable {
         }
     }
 
-    public HTTPRunnable(String url, Handler handler, HTTPTaskType type){
+    public HTTPRunnable(Context context, String url, Handler handler, HTTPTaskType type){
+        this.context = context;
         this.url = url;
         this.handler = handler;
         this.taskType = type;
     }
 
     public void getStringRequest(String url) throws Exception{
-        OkHttpClient client = new OkHttpClient();
+        OkHttpClient client = new OkHttpClient(context);
         Request request = new okhttp3.Request.Builder()
                 .url(this.url)
                 .build();
