@@ -17,6 +17,8 @@ import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.telephony.gsm.GsmCellLocation;
 
+import java.lang.reflect.Method;
+import java.util.Date;
 import java.util.logging.Level;
 
 import static nu.xpan.traceroutedemo.MainActivity.logger;
@@ -45,7 +47,8 @@ public class NetUtility extends PhoneStateListener {
     private int mWIFISignalStrength;
     private TelephonyManager mTelManager;
     private SignalStrength mSignalStrength;
-
+    private LocalNetworkingState mWIFINetState;
+    private LocalNetworkingState mCellNetState;
 
     public NetUtility(Context cx, Handler handler){
         this.mContext = cx;
@@ -60,13 +63,16 @@ public class NetUtility extends PhoneStateListener {
         this.startListening();
         this.mCellSignalStrength = 0;
         this.mWIFISignalStrength = 0;
-        mTelManager = (TelephonyManager)mContext.getSystemService(Context.TELEPHONY_SERVICE);
         mTelManager.listen(this, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+        //10min and 60s
+        mWIFINetState = new LocalNetworkingState("WIFI", this.mName, 10, 60, this,cx);
+        //mWIFINetState.startIPUpdate();
+        mCellNetState = new LocalNetworkingState("mobile", this.mName, 10, 60, this,cx);
 
     }
 
-    public String getNetworkingState(){
-        return mState.toString();
+    public State getNetworkingState(){
+        return mState;
     }
     public String getNetworkingType() {
         return mType;
@@ -76,16 +82,16 @@ public class NetUtility extends PhoneStateListener {
     }
 
 
+    public enum Type {
+        WIFI,
+        CELLULAR
+    };
+
     public enum State {
         UNKNOWN,
         CONNECTED,
         NOT_CONNECTED,
         CONNECTING
-    };
-
-    public enum Type {
-      WIFI,
-      CELLULAR
     };
 
     private class ConnectivityBroadcastReceiver extends BroadcastReceiver {
@@ -102,12 +108,16 @@ public class NetUtility extends PhoneStateListener {
                     intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
             mReason = intent.getStringExtra(ConnectivityManager.EXTRA_REASON);
             if (noConnectivity) {
+
                 logger.log(Level.INFO, "Network disconnected: ");
                 mState = State.NOT_CONNECTED;
                 mName = null;
                 String msg_obj = String.format(
-                    "NetworkingState Updated: %s (%s)\n", mState, mReason==null ? "" : mReason);
+                        "NetworkingState Updated: %s (%s)\n", mState, mReason == null ? "" : mReason);
                 postMessage(InternalConst.MSGType.NETINFO_MSG, msg_obj);
+                mWIFINetState.stopRepeatedRefresh();
+                mCellNetState.stopRepeatedRefresh();
+
                 return;
             }
 
@@ -131,15 +141,23 @@ public class NetUtility extends PhoneStateListener {
                 logger.log(Level.INFO, "Network connecting: "+mType+'/'+subType);
                 mState = State.CONNECTING;
             }
-
-            // update type and name
-            if(isConnected &&  mNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI){
-                mName = fetchWIFIName();
-                subType = mName;
+            try {
+                // update type and name
+                if (isConnected && mNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
+                    mName = fetchWIFIName();
+                    subType = mName;
+                    mCellNetState.stopRepeatedRefresh();
+                    mWIFINetState.startRepeatedRefresh();
+                } else if (isConnected) {
+                    mName = subType;
+                    mCellularType = mTelManager.getNetworkType();
+                    mWIFINetState.stopRepeatedRefresh();
+                    mCellNetState.startRepeatedRefresh();
+                }
             }
-            else if(isConnected){
-                mName = subType;
-                mCellularType = mTelManager.getNetworkType();
+            catch(Exception e){
+                System.err.println("Exception "+e);
+                e.printStackTrace();
             }
 
             //update log information
@@ -156,6 +174,25 @@ public class NetUtility extends PhoneStateListener {
         mSignalStrength = signalStrength;
     }
 
+    public LocalNetworkingState.LocalNetworkingStateSnapshot getRefreshedFirstMileLatency(){
+        if(mState == State.NOT_CONNECTED)
+            return null;
+        else if(mType.equals("mobile"))
+            return mCellNetState.getNetworkState();
+        else if(mType.equals("WIFI"))
+            return mWIFINetState.getNetworkState();
+        return null;
+    }
+
+    public void refreshFirstMileLatency(){
+        if(mState == State.NOT_CONNECTED)
+            return ;
+        else if(mType.equals("mobile"))
+            mCellNetState.startOnetimeRefresh();
+        else if(mType.equals("WIFI"))
+            mWIFINetState.startOnetimeRefresh();
+    }
+
     public String getIMEI(){
         GsmCellLocation location = (GsmCellLocation) mTelManager.getCellLocation();
         mIMEI = mTelManager.getDeviceId();
@@ -163,27 +200,42 @@ public class NetUtility extends PhoneStateListener {
     }
 
     public int getLAC(){
-        GsmCellLocation location = (GsmCellLocation) mTelManager.getCellLocation();
-        mLAC = location.getLac();
-        return mLAC;
+        try {
+            GsmCellLocation location = (GsmCellLocation) mTelManager.getCellLocation();
+            mLAC = location.getLac();
+            return mLAC;
+        }
+        catch(Exception e){
+            logger.severe("failed to get LAC");
+        }
+        return 0;
     }
 
     public int getMCC(){
-        String networkOperator = mTelManager.getNetworkOperator();
+        try {
+            String networkOperator = mTelManager.getNetworkOperator();
 
-        if (networkOperator != null) {
-            mMCC = Integer.valueOf(networkOperator.substring(0, 3));
-            return mMCC;
+            if (networkOperator != null) {
+                mMCC = Integer.valueOf(networkOperator.substring(0, 3));
+                return mMCC;
+            }
+        }
+        catch(Exception e){
+            logger.severe("failed to get mcc");
         }
         return 0;
     }
 
     public int getMNC(){
-        String networkOperator = mTelManager.getNetworkOperator();
-
-        if (networkOperator != null) {
-            mMNC = Integer.valueOf(networkOperator.substring(3));
-            return mMNC;
+        try {
+            String networkOperator = mTelManager.getNetworkOperator();
+            if (networkOperator != null) {
+                mMNC = Integer.valueOf(networkOperator.substring(3));
+                return mMNC;
+            }
+        }
+        catch(Exception e){
+            logger.severe("failed to get MNC ");
         }
         return 0;
     }
@@ -200,11 +252,31 @@ public class NetUtility extends PhoneStateListener {
     }
 
     public String toString(){
-        return String.format("State : %s\nType  : %s\nName  : %s\nWIFISig: %d\nCELLSig: %d\n" +
-                "LAC   :%d\nMNC   :%d\nMCC   :%d\nIMEI:   %s\n",
-                getNetworkingState(), getNetworkingType(), getNetworkingName(),
-                getWIFISignalStrength(), getCellSignalStrength(),
-                getLAC(), getMNC(), getMCC(), getIMEI());
+        try {
+            LocalNetworkingState.LocalNetworkingStateSnapshot snapshot = getRefreshedFirstMileLatency();
+            String localBAIP = "null";
+            float lossRate = -1;
+            float latency = -1;
+            Date date = new Date();
+            if (snapshot != null) {
+                date = new Date(snapshot.timestamp);
+                lossRate = snapshot.mLossRate;
+                latency = snapshot.mLatency;
+                localBAIP = snapshot.mIP;
+            }
+
+            return String.format("State : %s\nType  : %s\nName  : %s\nWIFISig: %d\nCELLSig: %d\n" +
+                            "LAC   :%d\nMNC   :%d\nMCC   :%d\nIMEI:   %s\n "+
+                            "LocalBAIP: %s\n Latency: %f\n LossRate: %f\n updateTime: %s\n",
+                    getNetworkingState().toString(), getNetworkingType().toString(), getNetworkingName(),
+                    getWIFISignalStrength(), getCellSignalStrength(),
+                    getLAC(), getMNC(), getMCC(), getIMEI(), localBAIP, latency, lossRate, date.toString());
+        }
+        catch(Exception e){
+            logger.severe("error in toString "+e);
+            e.printStackTrace();
+            return "";
+        }
     }
     public synchronized void startListening() {
         if (!mListening) {

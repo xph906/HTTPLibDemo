@@ -66,27 +66,26 @@ public class TraceRoute {
         System.out.println("failed to install traceroute");
     }
 
-    public void runTraceroute(String ip){
+    public void runTraceroute(String remoteIP){
         if(!isInstalled){
-            Log.d(LOG_TAG,"failed to run traceroute: not installed");
             System.out.println("failed to run traceroute: not installed");
             return ;
         }
-        String cmd = traceroutePath+" -nI "+" "+ip;
+        String cmd = traceroutePath+" -nI --first=2 --max-hops=2 --wait=3 --queries=5"+" "+remoteIP;
         Process process;
         StreamGobbler errorGobbler, outGobbler;
         try{
-            System.out.println("start executing "+cmd);
+            //System.out.println("start executing "+cmd);
             process = Runtime.getRuntime().exec(cmd);
-            errorGobbler = new StreamGobbler(process.getErrorStream(), "ERR_STREAM", handler);
+            errorGobbler = new StreamGobbler(process.getErrorStream(), "ERR_STREAM", handler,InternalConst.MSGType.USER_NET_UPDATE_MSG);
             errorGobbler.start();
-            outGobbler = new StreamGobbler(process.getInputStream(), "OUT_STREAM", handler);
+            outGobbler = new StreamGobbler(process.getInputStream(), "OUT_STREAM", handler,InternalConst.MSGType.USER_NET_UPDATE_MSG);
             outGobbler.start();
         }catch(Exception e){
             System.err.println("failed to start traceroute: "+e.toString());
             return;
         }
-        System.out.println("start waiting for traceroute to be finished");
+        //System.out.println("start waiting for traceroute to be finished");
 
         ProcessWithTimeout processWithTimeout = new ProcessWithTimeout(process, "traceroute");
         int exitCode = processWithTimeout.waitForProcess(timeout);
@@ -102,20 +101,14 @@ public class TraceRoute {
 
         //Interrupt output stream threats if required.
         if(!errorGobbler.isInterrupted()){
-            System.out.println("error output has not been interrupted. Do it.");
+            //System.out.println("error output has not been interrupted. Do it.");
             errorGobbler.interrupt();
         }
-        else{
-            System.err.println("error output has already been interrupted.");
-        }
+
         if(!outGobbler.isInterrupted()){
-            System.out.println("std output has not been interrupted. Do it.");
+            //System.out.println("std output has not been interrupted. Do it.");
             outGobbler.interrupt();
         }
-        else{
-            System.out.println("std output has already been interrupted.");
-        }
-
 
     }
 

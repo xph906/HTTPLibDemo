@@ -17,6 +17,7 @@ class StreamGobbler
     private InputStream inputStream;
     private String streamType;
     private Handler handler;
+    private int msgType;
 
     /**
      * Constructor.
@@ -25,11 +26,12 @@ class StreamGobbler
      * @param streamType the stream type (should be OUTPUT or ERROR)
      */
     StreamGobbler(final InputStream inputStream,
-                  final String streamType, Handler handler)
+                  final String streamType, Handler handler, int msgType)
     {
         this.inputStream = inputStream;
         this.streamType = streamType;
         this.handler = handler;
+        this.msgType = msgType;
     }
 
     /**
@@ -43,15 +45,18 @@ class StreamGobbler
             InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
             BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
             String line = null;
+            StringBuilder sb = new StringBuilder();
             while ((line = bufferedReader.readLine()) != null)
             {
-                System.out.println(streamType + ">" + line);
-                Message msg = new Message();
-                msg.what = InternalConst.MSGType.TRACEROUTE_MSG;
-                msg.obj = line;
-                handler.sendMessage(msg);
-                System.out.println("done sending the msg");
+                sb.append(line+"\n");
             }
+            if(sb.toString().trim().length()==0)
+                return;
+            Message msg = new Message();
+            msg.what = msgType;
+            msg.obj = "["+streamType+"] \n"+sb.toString();
+            handler.sendMessage(msg);
+            //System.out.println("done sending the msg");
         }
         catch (IOException ex)
         {
@@ -61,6 +66,7 @@ class StreamGobbler
         catch (Exception ex){
             System.err.println("Failed to consume input stream of type "+ streamType +
                     "."+ex.toString());
+            ex.printStackTrace();
         }
     }
 }
