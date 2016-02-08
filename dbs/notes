@@ -1,0 +1,5 @@
+Copy database
+  adb shell "run-as nu.xpan.traceroutedemo ls -l /data/data/package_name/databases/NetProphet.db "
+    e.g., adb shell "run-as nu.xpan.traceroutedemo ls -l /data/data/nu.xpan.traceroutedemo/databases/NetProphet.db "
+  adb pull /data/data/package_name/databases/NetProphet.db
+
