@@ -100,6 +100,7 @@ public class MainActivity extends ActionBarActivity {
                     default:
                         super.handleMessage(inputMessage);
                 }
+
             }
         };
         client = new MyHTTPClient(getApplicationContext(), handler);

@@ -63,6 +63,8 @@ public class NetUtility extends PhoneStateListener {
         this.startListening();
         this.mCellSignalStrength = 0;
         this.mWIFISignalStrength = 0;
+        mTelManager =
+                (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
         mTelManager.listen(this, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
         //10min and 60s
         mWIFINetState = new LocalNetworkingState("WIFI", this.mName, 10, 60, this,cx);
