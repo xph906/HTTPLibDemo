@@ -15,6 +15,7 @@ import android.telephony.CellSignalStrengthGsm;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
+import android.telephony.cdma.CdmaCellLocation;
 import android.telephony.gsm.GsmCellLocation;
 
 import java.lang.reflect.Method;
@@ -29,16 +30,18 @@ public class NetUtility extends PhoneStateListener {
     private String mName;
     private int mWIFISignalLevel;
     private int mCellSignalLevel;
-    private int mMCC;   // mobile network code
-    private int mMNC;   // mobile country code
-    private int mLAC;   // local area code
+    private int mMCC;   // mobile network code for GSM, system ID for CDMA
+    private int mMNC;   // mobile country code for GSM, network operator fo CDMA
+    private int mLAC;   // local area code for GSM, network ID for CDMA
     private String mIMEI;
+    private int mCellularType;
+    //NEW
+    private CellularType mGeneralizedCellularType;
 
     private Context mContext;
     private boolean mListening; //whether monitoring connection changes
     private boolean mIsFailover;
     private NetworkInfo.DetailedState mDetailedState;
-    private int mCellularType;
     private String mReason;
     private NetworkInfo mNetworkInfo, mOtherNetworkInfo;
     private ConnectivityBroadcastReceiver mReceiver;
@@ -71,6 +74,9 @@ public class NetUtility extends PhoneStateListener {
         //mWIFINetState.startIPUpdate();
         mCellNetState = new LocalNetworkingState("mobile", this.mName, 10, 60, this,cx);
 
+        //NEW
+        mGeneralizedCellularType = CellularType.GSM;
+        getLAC(); //update cellular type
     }
 
     public State getNetworkingState(){
@@ -83,10 +89,10 @@ public class NetUtility extends PhoneStateListener {
         return mName;
     }
 
-
-    public enum Type {
-        WIFI,
-        CELLULAR
+    //NEW
+    public enum CellularType {
+        CDMA,
+        GSM
     };
 
     public enum State {
@@ -195,31 +201,58 @@ public class NetUtility extends PhoneStateListener {
             mWIFINetState.startOnetimeRefresh();
     }
 
+    //NEW
     public String getIMEI(){
-        GsmCellLocation location = (GsmCellLocation) mTelManager.getCellLocation();
-        mIMEI = mTelManager.getDeviceId();
+        try {
+            mIMEI = mTelManager.getDeviceId();
+        }
+        catch(Exception e){
+            logger.severe("failed to get IMEI");
+        }
         return mIMEI;
     }
 
+    //NEW
     public int getLAC(){
         try {
-            GsmCellLocation location = (GsmCellLocation) mTelManager.getCellLocation();
-            mLAC = location.getLac();
+            //For CDMA, we get Network ID here
+            if(mGeneralizedCellularType == CellularType.GSM) {
+                GsmCellLocation location = (GsmCellLocation) mTelManager.getCellLocation();
+                mLAC = location.getLac();
+            }
+            else{
+                CdmaCellLocation cdmaCellLocation = (CdmaCellLocation) mTelManager.getCellLocation();
+                mLAC = cdmaCellLocation.getNetworkId();
+            }
             return mLAC;
         }
         catch(Exception e){
-            logger.severe("failed to get LAC");
+            try{
+                CdmaCellLocation cdmaCellLocation = (CdmaCellLocation) mTelManager.getCellLocation();
+                mLAC = cdmaCellLocation.getNetworkId();
+                mGeneralizedCellularType = CellularType.CDMA;
+            }
+            catch(Exception err){
+                logger.severe("failed to get LAC");
+            }
         }
         return 0;
     }
 
+    //NEW
+    //MCC for CDMA is system ID
     public int getMCC(){
         try {
             String networkOperator = mTelManager.getNetworkOperator();
-
-            if (networkOperator != null) {
-                mMCC = Integer.valueOf(networkOperator.substring(0, 3));
-                return mMCC;
+            if(mGeneralizedCellularType == CellularType.GSM){
+                if (networkOperator != null) {
+                    mMCC = Integer.valueOf(networkOperator.substring(0, 3));
+                    return mMCC;
+                }
+            }
+            else{
+                CdmaCellLocation cdmaCellLocation = (CdmaCellLocation) mTelManager.getCellLocation();
+                return cdmaCellLocation.getSystemId();
             }
         }
         catch(Exception e){
@@ -228,11 +261,20 @@ public class NetUtility extends PhoneStateListener {
         return 0;
     }
 
+    //NEW
+    //MNC for CDMA is NetworkOperator
     public int getMNC(){
         try {
+
             String networkOperator = mTelManager.getNetworkOperator();
-            if (networkOperator != null) {
-                mMNC = Integer.valueOf(networkOperator.substring(3));
+            if(mGeneralizedCellularType == CellularType.GSM) {
+                if (networkOperator != null) {
+                    mMNC = Integer.valueOf(networkOperator.substring(3));
+                    return mMNC;
+                }
+            }
+            else{
+                mMNC = Integer.valueOf(networkOperator);
                 return mMNC;
             }
         }
@@ -333,39 +375,46 @@ public class NetUtility extends PhoneStateListener {
 
     }
 
+    //NEW
+    //TODO: Needs further updates!!!
     private int getCellSignalStrength()
     {
         int dbm = 0;
-        if(mCellularType == TelephonyManager.NETWORK_TYPE_LTE)
-        {
-            String ssignal = mSignalStrength.toString();
-            String[] parts = ssignal.split(" ");
-            int asu = Integer.parseInt(parts[8]);
-            dbm = asu*2-113;
-            logger.info("Prophet:phoneInfo " + "LTE:"+dbm);
-        }
-        else if(mCellularType == TelephonyManager.NETWORK_TYPE_CDMA
-                || mCellularType == TelephonyManager.NETWORK_TYPE_1xRTT )
-        {
-            dbm = mSignalStrength.getCdmaDbm();
-            logger.info("Prophet:phoneInfo " + "CDMA:"+dbm);
-        }
-        else if(mCellularType == TelephonyManager.NETWORK_TYPE_EVDO_0
-                || mCellularType == TelephonyManager.NETWORK_TYPE_EVDO_A
-                || mCellularType == TelephonyManager.NETWORK_TYPE_EVDO_B)
-        {
+        try {
+            if (mCellularType == TelephonyManager.NETWORK_TYPE_LTE) {
+                String ssignal = mSignalStrength.toString();
+                String[] parts = ssignal.split(" ");
+                int asu = Integer.parseInt(parts[8]);
+                dbm = asu * 2 - 113;
+                logger.info("Prophet:phoneInfo " + "LTE:" + dbm);
+            } else if (mCellularType == TelephonyManager.NETWORK_TYPE_CDMA
+                    || mCellularType == TelephonyManager.NETWORK_TYPE_1xRTT ||
+                    mCellularType == TelephonyManager.NETWORK_TYPE_EHRPD ) {
+                dbm = mSignalStrength.getCdmaDbm();
+                logger.info("Prophet:phoneInfo " + "CDMA:" + dbm);
+            } else if (mCellularType == TelephonyManager.NETWORK_TYPE_EVDO_0
+                    || mCellularType == TelephonyManager.NETWORK_TYPE_EVDO_A
+                    || mCellularType == TelephonyManager.NETWORK_TYPE_EVDO_B) {
 
-            dbm = mSignalStrength.getEvdoDbm();
-            logger.info("Prophet:phoneInfo "+"EVDO:"+dbm);
+                dbm = mSignalStrength.getEvdoDbm();
+                logger.info("Prophet:phoneInfo " + "EVDO:" + dbm);
+            } else if (mSignalStrength.isGsm()) {
+                int asu = mSignalStrength.getGsmSignalStrength();
+                dbm = asu * 2 - 113;
+                logger.info("Prophet:phoneInfo " + "GSM:" + dbm);
+            } else {
+                if(mGeneralizedCellularType == CellularType.GSM){
+                    int asu = mSignalStrength.getGsmSignalStrength();
+                    dbm = asu * 2 - 113;
+                }
+                else
+                    dbm = mSignalStrength.getCdmaDbm();
+                logger.info("Prophet:unknown cellular type "+mCellularType + "GSM:" + dbm);
+            }
         }
-        else if(mSignalStrength.isGsm())
-        {
-            int asu = mSignalStrength.getGsmSignalStrength();
-            dbm = asu*2-113;
-            logger.info("Prophet:phoneInfo "+"GSM:"+dbm);
-        }
-        else{
-            dbm = -113;
+        catch(Exception e){
+            logger.severe("error in getting cell signal strength");
+
         }
 
         WifiManager wifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
