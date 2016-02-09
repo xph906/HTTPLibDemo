@@ -2,6 +2,8 @@ Copy database:
   adb shell "run-as nu.xpan.traceroutedemo chmod 666 /data/data/package_name/databases/NetProphet.db "
     e.g., adb shell "run-as nu.xpan.traceroutedemo chmod 666 /data/data/nu.xpan.traceroutedemo/databases/NetProphet.db "
   adb pull /data/data/package_name/databases/NetProphet.db
+Or:
+  adb pull /sdcard/NetProphet_backup.db after clicking "Save"
 
 Only select requests whose prev_req_id = 0;
     e.g., select * from HTTPRequestInfo where prev_req_id = 0;
