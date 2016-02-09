@@ -1,5 +1,33 @@
-Copy database
-  adb shell "run-as nu.xpan.traceroutedemo ls -l /data/data/package_name/databases/NetProphet.db "
-    e.g., adb shell "run-as nu.xpan.traceroutedemo ls -l /data/data/nu.xpan.traceroutedemo/databases/NetProphet.db "
+Copy database:
+  adb shell "run-as nu.xpan.traceroutedemo chmod 666 /data/data/package_name/databases/NetProphet.db "
+    e.g., adb shell "run-as nu.xpan.traceroutedemo chmod 666 /data/data/nu.xpan.traceroutedemo/databases/NetProphet.db "
   adb pull /data/data/package_name/databases/NetProphet.db
+
+Only select requests whose prev_req_id = 0;
+    e.g., select * from HTTPRequestInfo where prev_req_id = 0;
+
+Two tables connect using req_id:
+    e.g., select * from HTTPRequestInfo, NetworkInfo where NetworkInfo.req_id = HTTPRequestInfo.req_id;
+  
+Do statistics on the following timing information:
+    1. HTTPRequestInfo.overall_delay
+    2. HTTPRequestInfo.dns_delay
+    3. HTTPRequestInfo.handshake_delay
+    4. HTTPRequestInfo.tls_delay
+    5. HTTPRequestInfo.server_delay
+    6. HTTPRequestInfo.ttfb_delay
+    7. HTTPRequestInfo.resp_trans_delay
+    8. NetworkInfo.net_type
+
+Do top 100 Alexa websites 5 times;
+Do top 100 Alexa Chinese websites 5 times;
+
+Four figures:
+    1. Top 100 Alexa websites using WIFI
+    2. Top 100 Alexa websites using CELLULAR Network
+    3. Top 100 Alexa Chinese websites WIFI
+    4. Top 100 Alexa Chinese websites CELLULAR network
+
+Statistics:
+    average timing information in each of the previous categories.
 
