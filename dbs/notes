@@ -11,7 +11,7 @@ Only select requests whose prev_req_id = 0;
 Two tables connect using req_id:
     e.g., select * from HTTPRequestInfo, NetworkInfo where NetworkInfo.req_id = HTTPRequestInfo.req_id;
   
-Do statistics on the following timing information:
+Do statistics on the following timing information (NOERROR):
     1. HTTPRequestInfo.overall_delay
     2. HTTPRequestInfo.dns_delay
     3. HTTPRequestInfo.handshake_delay
@@ -20,6 +20,8 @@ Do statistics on the following timing information:
     6. HTTPRequestInfo.ttfb_delay
     7. HTTPRequestInfo.resp_trans_delay
     8. NetworkInfo.net_type
+
+    1. HTTPRequestInfo.error_msg
 
 Do top 100 Alexa websites 5 times;
 Do top 100 Alexa Chinese websites 5 times;
@@ -33,3 +35,7 @@ Four figures:
 Statistics:
     average timing information in each of the previous categories.
 
+Common Sqlite3 commands:
+	sqlite3: open DB
+	.tables : show all the tables;
+	.schema : show table structure;
