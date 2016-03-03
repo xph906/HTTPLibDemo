@@ -17,10 +17,23 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import android.os.*;
+
+import okhttp3.Call;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -45,6 +58,10 @@ public class MainActivity extends ActionBarActivity {
     MyHTTPClient client;
     NetUtility util;
 
+    Button sys_dns_button, my_dns_button, dns_cache_button;
+    EditText dns_view;
+    Dns sys_dns, my_dns;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,9 +77,18 @@ public class MainActivity extends ActionBarActivity {
         text_sview = (ScrollView)findViewById(R.id.text_scroll_view);
         image_sview = (ScrollView)findViewById(R.id.image_scroll_view);
 
+        my_dns_button = (Button)findViewById(R.id.my_dns_button);
+        sys_dns_button = (Button)findViewById(R.id.sys_dns_button);
+        dns_cache_button = (Button)findViewById(R.id.dns_cache_button);
+        dns_view = (EditText)findViewById(R.id.dns_text);
+
         TelephonyManager mTelephony = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         String userid = mTelephony.getDeviceId();
         System.err.println("DEBUG userid: "+userid);
+        OkHttpClient.initializeNetProphet(getApplicationContext());
+
+        sys_dns = new SysDns();
+        my_dns = new NetProphetDns();
 
         handler = new Handler(Looper.getMainLooper()) {
             String contents;
@@ -97,6 +123,11 @@ public class MainActivity extends ActionBarActivity {
                         result_view.append(contents+"\n");
                         result_view.append(old_content);
                         break;
+                    case InternalConst.MSGType.DNS_MSG:
+                          contents = (String)inputMessage.obj;
+                        result_view.setText(contents);
+                        break;
+
                     default:
                         super.handleMessage(inputMessage);
                 }
@@ -135,7 +166,7 @@ public class MainActivity extends ActionBarActivity {
                 String url = "http://rss.news.sohu.com/rss/focus.xml";
                 logger.log(Level.INFO, "start loading HTTP object:" + url);
                 client.loadString(url);
-                logger.log(Level.INFO, "done handling  ...");
+
             }
         });
 
@@ -155,6 +186,60 @@ public class MainActivity extends ActionBarActivity {
                 logger.log(Level.INFO, "start request image:" + url);
                 client.loadImage(url);
                 logger.log(Level.INFO, "done loading image  ...");
+            }
+        });
+
+        sys_dns_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                ThreadPerTaskExecutor executor = new ThreadPerTaskExecutor();
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            String hostname = dns_view.getText().toString();
+                            sys_dns.lookup(hostname);
+                            String rs = null;
+                            if(((SysDns)sys_dns).isSuccessful())
+                                rs = String.format("Successful DNS:%s\n Delay: %d",
+                                    hostname,((SysDns)sys_dns).getDNSDelay() );
+                            else
+                                rs = String.format("Failed DNS:%s\n Delay: %d\n Msg: %s",
+                                    hostname, ((SysDns)sys_dns).getDNSDelay(),
+                                    ((SysDns)sys_dns).getErrorMsg());
+
+                            Message msg = new Message();
+
+                            msg.what = InternalConst.MSGType.DNS_MSG;
+                            msg.obj = rs;
+                            handler.sendMessage(msg);
+                        }
+                        catch(Exception e){
+                            System.err.println("sys_dns_button error: "+e.toString());
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+        });
+
+        dns_cache_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String hostname = dns_view.getText().toString();
+                List<InetAddress> ads = ((NetProphetDns)my_dns).searchSystemDNSCache(hostname);
+                String rs = null;
+                if (ads == null){
+                    rs = String.format("%s has no DNS cache\n", hostname);
+                }
+                else{
+                    StringBuilder sb = new StringBuilder();
+                    for (InetAddress ad : ads){
+                        sb.append(ad.getHostAddress()+"\n");
+                    }
+                    rs = String.format("%s has DNS cache:\n!!! %s\n", hostname, sb.toString());
+                }
+                result_view.setText(rs);
             }
         });
 
@@ -183,5 +268,11 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    class ThreadPerTaskExecutor implements Executor {
+        public void execute(Runnable r) {
+            new Thread(r).start();
+        }
     }
 }

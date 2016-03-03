@@ -60,15 +60,20 @@ public class HTTPRunnable implements Runnable {
     }
 
     public void getStringRequest(String url) throws Exception{
-        OkHttpClient client = new OkHttpClient(context);
+        System.err.println("in getStringRequest 1");
+        OkHttpClient client = new OkHttpClient();
+        System.err.println("in getStringRequest 2");
         Request request = new okhttp3.Request.Builder()
                 .url(this.url)
                 .build();
+        System.err.println("in getStringRequest 3");
         Call c = client.newCall(request);
         Response response = c.execute();
+        System.err.println("in getStringRequest 4");
         ResponseBody body = response.body();
+        System.err.println("in getStringRequest 5");
         String contents = body.string();
-
+        System.err.println("Get contents: "+contents);
         Call.CallStatInfo timingObj = c.getCallStatInfo();
         c.storeCallStatInfo(true);
 
@@ -210,7 +215,9 @@ public class HTTPRunnable implements Runnable {
                     getImageRequest(this.url);
                     break;
                 case STRING:
+                    System.err.println("1111");
                     getStringRequest(this.url);
+                    System.err.println("22222");
                     break;
                 default:
                     Message msg = new Message();

@@ -1,7 +1,6 @@
 Copy database:
-  adb shell "run-as nu.xpan.traceroutedemo chmod 666 /data/data/package_name/databases/NetProphet.db "
-    e.g., adb shell "run-as nu.xpan.traceroutedemo chmod 666 /data/data/nu.xpan.traceroutedemo/databases/NetProphet.db "
-  adb pull /data/data/package_name/databases/NetProphet.db
+  adb shell "run-as com.zjulist.httpmeasurement chmod 666 /data/data/com.zjulist.httpmeasurement/databases/NetProphet.db "
+  adb pull /data/data/com.zjulist.httpmeasurement/databases/NetProphet.db
 Or:
   adb pull /sdcard/NetProphet_backup.db after clicking "Save"
 
@@ -23,7 +22,7 @@ Do statistics on the following timing information (NOERROR):
 
     1. HTTPRequestInfo.error_msg
 
-Do top 100 Alexa websites 5 times;
+Do top 100 Alexa websites 5 times (wait for 5 mins for each round);
 Do top 100 Alexa Chinese websites 5 times;
 
 Four figures:

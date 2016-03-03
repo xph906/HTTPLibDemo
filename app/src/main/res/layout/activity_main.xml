@@ -56,6 +56,36 @@
             android:layout_height="wrap_content"
             android:id="@+id/image_button"/>
     </LinearLayout>
+    <LinearLayout
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/dns_layout">
+
+        <EditText android:text="www.sina.com.cn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16dp"
+            android:id="@+id/dns_text" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SYS"
+            android:id="@+id/sys_dns_button"/>
+        <Button
+            android:text="MY"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/my_dns_button"/>
+        <Button
+            android:text="C"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/dns_cache_button"/>
+
+    </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"
