@@ -227,17 +227,24 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onClick(View view) {
                 String hostname = dns_view.getText().toString();
-                List<InetAddress> ads = ((NetProphetDns)my_dns).searchSystemDNSCache(hostname);
+                List<InetAddress> ads = new ArrayList<InetAddress>();
+                StringBuilder errorMsg = new StringBuilder();
+                boolean hasCache = ((NetProphetDns)my_dns).searchSystemDNSCache(hostname,ads,errorMsg);
                 String rs = null;
-                if (ads == null){
-                    rs = String.format("%s has no DNS cache\n", hostname);
+                if (hasCache == false){
+                    rs = String.format("%s has NO DNS cache\n", hostname);
                 }
                 else{
-                    StringBuilder sb = new StringBuilder();
-                    for (InetAddress ad : ads){
-                        sb.append(ad.getHostAddress()+"\n");
+                    if(errorMsg.toString().length() != 0){
+                        rs = String.format("Negative cache found for %s: %s \n", hostname,errorMsg.toString());
                     }
-                    rs = String.format("%s has DNS cache:\n!!! %s\n", hostname, sb.toString());
+                    else{
+                        StringBuilder sb = new StringBuilder();
+                        for (InetAddress ad : ads){
+                            sb.append(ad.getHostAddress()+"\n");
+                        }
+                        rs = String.format("%s has DNS cache:\n %s\n", hostname, sb.toString());
+                    }
                 }
                 result_view.setText(rs);
             }
