@@ -20,6 +20,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -188,6 +189,41 @@ public class MainActivity extends ActionBarActivity {
                 logger.log(Level.INFO, "done loading image  ...");
             }
         });
+        my_dns_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                ThreadPerTaskExecutor executor = new ThreadPerTaskExecutor();
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            String hostname = dns_view.getText().toString();
+                            List<InetAddress> rs= my_dns.lookup(hostname);
+
+                            StringBuilder sb = new StringBuilder();
+                            if(rs == null){
+                                System.err.println("failed dnslookup");
+                            }
+                            else{
+                                for(InetAddress ad : rs){
+                                    sb.append(ad.getHostAddress().toString()+'\n');
+                                }
+                            }
+
+                            Message msg = new Message();
+
+                            msg.what = InternalConst.MSGType.DNS_MSG;
+                            msg.obj = sb.toString();
+                            handler.sendMessage(msg);
+                        }
+                        catch(Exception e){
+                            System.err.println("my_dns error: "+e.toString());
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+        });
 
         sys_dns_button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -246,7 +282,31 @@ public class MainActivity extends ActionBarActivity {
                         rs = String.format("%s has DNS cache:\n %s\n", hostname, sb.toString());
                     }
                 }
-                result_view.setText(rs);
+                StringBuilder sb = new StringBuilder();
+                try {
+                    InetAddress addr = ((NetProphetDns) my_dns).testCache(1, hostname);
+                    if (addr == null){
+                        sb.append("NetProphet DefaultCache doesn't contain this item:\n");
+                    }
+                    else {
+                        sb.append("NetProphet DefaultCache item:\n");
+                        sb.append(addr.getHostAddress() + "\n");
+                    }
+
+                    addr = ((NetProphetDns) my_dns).testCache(2, hostname);
+                    if (addr == null){
+                        sb.append("NetProphet SecondLevelCache doesn't contain this item:\n");
+                    }
+                    else {
+                        sb.append("NetProphet SecondLevelCache item:\n");
+                        sb.append(addr.getHostAddress() + "\n");
+                    }
+
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
+
+                result_view.setText(rs+"\n"+sb.toString());
             }
         });
 

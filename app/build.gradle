@@ -25,6 +25,7 @@ dependencies {
     compile 'com.squareup.okio:okio:1.6.0'
     compile 'com.google.code.gson:gson:2.3'
     compile files('libs/dnsjava-2.1.7.jar')
+    //compile files('libs/org.xbill.dns_2.1.7.jar')
     //compile 'com.cesards.android:cropimageview:1.0.2.1'
     //compile files('libs/okcurl-3.1.0-SNAPSHOT-jar-with-dependencies.jar')
 
