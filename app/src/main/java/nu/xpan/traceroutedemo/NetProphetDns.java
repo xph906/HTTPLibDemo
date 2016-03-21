@@ -107,7 +107,7 @@ public class NetProphetDns implements Dns {
     private long userDefinedTTL, userDefinedNegTTL;
 
     /* Default lookup server*/
-    private long dnsDefaultTimeout;
+    private int dnsDefaultTimeout;
     private String dnsServer;
     private Resolver resolver ;
     private Map<Name, Set<Name>> host2DNSName;
@@ -178,6 +178,7 @@ public class NetProphetDns implements Dns {
             lookup.setCache(defaultCache);
             long t1 = System.currentTimeMillis();
             Record[] records = lookup.run();
+            
             long dnsDelay = System.currentTimeMillis() - t1;
             System.out.println("done DNS lookup in "+dnsDelay +" ms");
 
@@ -352,10 +353,13 @@ public class NetProphetDns implements Dns {
      * */
     private Resolver createNewResolverBasedOnDnsServer(){
         try{
+            Resolver resolver = null;
             if (dnsServer == null)
-                return new SimpleResolver();
+                resolver = new SimpleResolver();
             else
-                return new SimpleResolver(dnsServer);
+                resolver = new SimpleResolver(dnsServer);
+            resolver.setTimeout(dnsDefaultTimeout);
+            return resolver;
         }
         catch(Exception e){
             System.err.println("failed to initiate Resolver:"+e);
