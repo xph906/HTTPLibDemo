@@ -30,6 +30,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import android.os.*;
 
+import netprophet.NetProphet;
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -39,25 +40,41 @@ import okhttp3.ResponseBody;
 
 public class MainActivity extends ActionBarActivity {
 
-    private static String HTTP_LOG_TAG = "NETDEMO";
+    private static String HTTP_LOG_TAG = "NETPROPHET";
     public static final Logger logger = Logger.getLogger(HTTP_LOG_TAG);
     private static int timeout;
     static {
         timeout = 5000;
         logger.setLevel(Level.INFO);
     }
+    /*
+    * Testing apps:
+    *   Most Popular app:   Douban.com
+    *                       Cnn.com
+    *                       avito.ru
+    *   Least Popular app:  instalook.ru
+    *                       zdal.cn
+    *                       arenarating.com
+    * */
+    //Networking related buttons
+    Button bw_testing_button, netinfo_button;
+    //DNS related buttons
+    Button dns_server_testing_button, dns_cache_display_button;
+    //App related buttons
+    Button http_cnn_button,http_douban_button, http_avito_button;
+    Button http_instalook_button, http_zdal_button, http_aren_button;
 
-    android.widget.Button start_button, net_button, img_button;
-    Button http_cnn_button,http_douban_button;
+    //Input field and result output
     EditText ip_view;
     TextView result_view;
-    ImageView image_view;
-    ScrollView text_sview, image_sview;
+    ScrollView text_sview;
+    Button clear_output_button;
+
     String method;
     TraceRoute traceroute;
     Handler handler;
     MyHTTPClient client;
-    NetUtility util;
+    netprophet.NetUtility netUtility;
 
     Button sys_dns_button, my_dns_button, dns_cache_button;
     EditText dns_view;
@@ -67,33 +84,35 @@ public class MainActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        start_button = (android.widget.Button)findViewById(R.id.trace_button);
+        //Networking related buttons
+        bw_testing_button = (android.widget.Button)findViewById(R.id.bw_testing_button);
+        netinfo_button = (android.widget.Button)findViewById(R.id.netinfo_button);
+        //DNS related buttons
+        dns_server_testing_button = (android.widget.Button)findViewById(R.id.dns_server_testing_button);
+        dns_cache_display_button = (android.widget.Button)findViewById(R.id.dns_cache_display_button);
+        //App related buttons
         http_cnn_button = (android.widget.Button)findViewById(R.id.http_cnn_button);
         http_douban_button = (android.widget.Button)findViewById(R.id.http_douban_button);
-        net_button = (android.widget.Button)findViewById(R.id.netinfo_button);
-        img_button = (android.widget.Button)findViewById(R.id.image_button);
+        http_avito_button = (android.widget.Button)findViewById(R.id.http_avito_button);
+        http_instalook_button = (android.widget.Button)findViewById(R.id.http_instalook_button);
+        http_zdal_button = (android.widget.Button)findViewById(R.id.http_zdal_button);
+        http_aren_button = (android.widget.Button)findViewById(R.id.http_aren_button);
+
+        //Input field and result output
         ip_view = (android.widget.EditText)findViewById(R.id.ip_text);
         result_view = (TextView)findViewById(R.id.result_text);
-        image_view = (ImageView)findViewById(R.id.image_view);
         text_sview = (ScrollView)findViewById(R.id.text_scroll_view);
-        image_sview = (ScrollView)findViewById(R.id.image_scroll_view);
+        clear_output_button = (android.widget.Button)findViewById(R.id.clear_output_button);
 
-        my_dns_button = (Button)findViewById(R.id.my_dns_button);
-        sys_dns_button = (Button)findViewById(R.id.sys_dns_button);
-        dns_cache_button = (Button)findViewById(R.id.dns_cache_button);
-        dns_view = (EditText)findViewById(R.id.dns_text);
+        //Initialize NetProphet
+        NetProphet.enableTestingMode();
+        NetProphet.initializeNetProphet(getApplicationContext(), false);
 
         TelephonyManager mTelephony = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        String userid = mTelephony.getDeviceId();
-        System.err.println("DEBUG userid: "+userid);
-        OkHttpClient.initializeNetProphet(getApplicationContext());
-
-        sys_dns = new SysDns();
-        my_dns = new NetProphetDns();
+        //String userid = mTelephony.getDeviceId();
 
         handler = new Handler(Looper.getMainLooper()) {
             String contents;
-            HTTPRunnable.ImageMsg imageMsg;
             @Override
             public void handleMessage(Message inputMessage) {
                 switch (inputMessage.what){
@@ -101,31 +120,31 @@ public class MainActivity extends ActionBarActivity {
                         contents = (String)inputMessage.obj;
                         result_view.append(contents+"\n");
                         break;
+
                     case InternalConst.MSGType.HTTPRESPONSE_MSG:
                         contents = (String)inputMessage.obj;
                         result_view.append(contents+"\n");
                         break;
-                    case InternalConst.MSGType.IMAGE_MSG:
-                        imageMsg = (HTTPRunnable.ImageMsg)inputMessage.obj;
-                        String rs = String.format(
-                                "get image with size:%dbytes\n timing info: %s",
-                                imageMsg.map.getByteCount(),imageMsg.comments);
-                        result_view.append(rs+"\n");
-                        image_view.setImageBitmap(imageMsg.map);
-                        break;
+
                     case InternalConst.MSGType.ERROR_MSG:
                         contents = (String)inputMessage.obj;
                         result_view.append(contents+"\n");
                         break;
+
                     case InternalConst.MSGType.NETINFO_MSG:
                         String old_content = result_view.getText().toString();
                         contents = (String)inputMessage.obj;
-                        result_view.setText("");
-                        result_view.append(contents+"\n");
+                        result_view.setText(contents+"\n");
                         result_view.append(old_content);
                         break;
+
                     case InternalConst.MSGType.DNS_MSG:
-                          contents = (String)inputMessage.obj;
+                        contents = (String)inputMessage.obj;
+                        result_view.setText(contents);
+                        break;
+
+                    case InternalConst.MSGType.APP_MEASURE_MSG:
+                        contents = (String)inputMessage.obj;
                         result_view.setText(contents);
                         break;
 
@@ -135,21 +154,16 @@ public class MainActivity extends ActionBarActivity {
 
             }
         };
-        client = new MyHTTPClient(getApplicationContext(), handler);
-        util = new NetUtility(getApplicationContext(), handler);
 
-        traceroute = new TraceRoute(getApplicationContext(),timeout, handler);
+        client = new MyHTTPClient(getApplicationContext(), handler);
+        netUtility = netprophet.NetUtility.getInstance(getApplicationContext(), null);
+
+        /*traceroute = new TraceRoute(getApplicationContext(),timeout, handler);
         if(!traceroute.isInstalled()) {
             traceroute.installTraceroute();
-        }
+        }*/
 
-        start_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                result_view.setText("start running ping for local gateway, click NetInfo for details");
-                util.refreshFirstMileLatency();
-            }
-        });
+        //Client Event
         http_cnn_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -171,147 +185,14 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
-        net_button.setOnClickListener(new View.OnClickListener() {
+        bw_testing_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-               // result_view.setText("");
-
-                result_view.setText(util.toString());
+                result_view.setText("");
+                netprophet.LocalBandwidthMeasureTool tool = netprophet.LocalBandwidthMeasureTool.getInstance();
+                tool.startMeasuringTask(netUtility);
             }
         });
-
-        img_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String url = "http://garuda.cs.northwestern.edu:3000/image-large";
-                logger.log(Level.INFO, "start request image:" + url);
-                client.loadImage(url);
-                logger.log(Level.INFO, "done loading image  ...");
-            }
-        });
-        my_dns_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ThreadPerTaskExecutor executor = new ThreadPerTaskExecutor();
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            String hostname = dns_view.getText().toString();
-                            List<InetAddress> rs= my_dns.lookup(hostname);
-
-                            StringBuilder sb = new StringBuilder();
-                            if(rs == null){
-                                System.err.println("failed dnslookup");
-                            }
-                            else{
-                                for(InetAddress ad : rs){
-                                    sb.append(ad.getHostAddress().toString()+'\n');
-                                }
-                            }
-
-                            Message msg = new Message();
-
-                            msg.what = InternalConst.MSGType.DNS_MSG;
-                            msg.obj = sb.toString();
-                            handler.sendMessage(msg);
-                        }
-                        catch(Exception e){
-                            System.err.println("my_dns error: "+e.toString());
-                            e.printStackTrace();
-                        }
-                    }
-                });
-            }
-        });
-
-        sys_dns_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ThreadPerTaskExecutor executor = new ThreadPerTaskExecutor();
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            String hostname = dns_view.getText().toString();
-                            sys_dns.lookup(hostname);
-                            String rs = null;
-                            if(((SysDns)sys_dns).isSuccessful())
-                                rs = String.format("Successful DNS:%s\n Delay: %d",
-                                    hostname,((SysDns)sys_dns).getDNSDelay() );
-                            else
-                                rs = String.format("Failed DNS:%s\n Delay: %d\n Msg: %s",
-                                    hostname, ((SysDns)sys_dns).getDNSDelay(),
-                                    ((SysDns)sys_dns).getErrorMsg());
-
-                            Message msg = new Message();
-
-                            msg.what = InternalConst.MSGType.DNS_MSG;
-                            msg.obj = rs;
-                            handler.sendMessage(msg);
-                        }
-                        catch(Exception e){
-                            System.err.println("sys_dns_button error: "+e.toString());
-                            e.printStackTrace();
-                        }
-                    }
-                });
-            }
-        });
-
-        dns_cache_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String hostname = dns_view.getText().toString();
-                List<InetAddress> ads = new ArrayList<InetAddress>();
-                StringBuilder errorMsg = new StringBuilder();
-                boolean hasCache = ((NetProphetDns)my_dns).searchSystemDNSCache(hostname,ads,errorMsg);
-                String rs = null;
-                if (hasCache == false){
-                    rs = String.format("%s has NO DNS cache\n", hostname);
-                }
-                else{
-                    if(errorMsg.toString().length() != 0){
-                        rs = String.format("Negative cache found for %s: %s \n", hostname,errorMsg.toString());
-                    }
-                    else{
-                        StringBuilder sb = new StringBuilder();
-                        for (InetAddress ad : ads){
-                            sb.append(ad.getHostAddress()+"\n");
-                        }
-                        rs = String.format("%s has DNS cache:\n %s\n", hostname, sb.toString());
-                    }
-                }
-                StringBuilder sb = new StringBuilder();
-                try {
-                    InetAddress addr = ((NetProphetDns) my_dns).testCache(1, hostname);
-                    if (addr == null){
-                        sb.append("NetProphet DefaultCache doesn't contain this item:\n");
-                    }
-                    else {
-                        sb.append("NetProphet DefaultCache item:\n");
-                        sb.append(addr.getHostAddress() + "\n");
-                    }
-
-                    addr = ((NetProphetDns) my_dns).testCache(2, hostname);
-                    if (addr == null){
-                        sb.append("NetProphet SecondLevelCache doesn't contain this item:\n");
-                    }
-                    else {
-                        sb.append("NetProphet SecondLevelCache item:\n");
-                        sb.append(addr.getHostAddress() + "\n");
-                    }
-
-                } catch (UnknownHostException e) {
-                    e.printStackTrace();
-                }
-
-                result_view.setText(rs+"\n"+sb.toString());
-            }
-        });
-
-        //testing
-
 
     }
 

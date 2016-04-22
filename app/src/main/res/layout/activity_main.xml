@@ -11,29 +11,35 @@
         android:focusableInTouchMode="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/head_layout">
+        android:orientation="horizontal"
+        android:id="@+id/head_layout"
+        android:paddingBottom="20dp">
 
         <EditText android:text="@string/default_ip"
             android:layout_width="0dp"
-            android:layout_weight=".70"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:id="@+id/ip_text" />
 
         <Button
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Trace"
-            android:id="@+id/trace_button"/>
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:text="BW Testing"
+            android:id="@+id/bw_testing_button"/>
         <Button
-            android:text="NetInfo"
-            android:layout_width="wrap_content"
+            android:text="Net Info"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:id="@+id/netinfo_button"/>
 
+
     </LinearLayout>
+
     <LinearLayout
-        android:paddingBottom="20dp"
+
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
@@ -41,49 +47,78 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="CNN"
+            android:text="CNN(US)"
             android:id="@+id/http_cnn_button"/>
         <Button
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="DOUBAN"
+            android:text="DOUBAN(CN)"
             android:id="@+id/http_douban_button"/>
         <Button
-            android:text="Image"
+            android:text="AVITO(RU)"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:id="@+id/image_button"/>
+            android:id="@+id/http_avito_button"/>
     </LinearLayout>
+    <LinearLayout
+        android:paddingBottom="20dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="AREN(US)"
+            android:id="@+id/http_aren_button"/>
+        <Button
+            android:text="ZDAL(CN)"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:id="@+id/http_zdal_button"/>
+        <Button
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="INST(RU)"
+            android:id="@+id/http_instalook_button"/>
+    </LinearLayout>
+
     <LinearLayout
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/dns_layout">
-
-        <EditText android:text="www.sina.com.cn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="16dp"
-            android:id="@+id/dns_text" />
+        android:id="@+id/dns_layout"
+        android:paddingBottom="20dp">
 
         <Button
-            android:layout_width="wrap_content"
+            android:text="DNS Testing"
+            android:textSize="5pt"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="SYS"
-            android:id="@+id/sys_dns_button"/>
+            android:id="@+id/dns_server_testing_button"/>
+
         <Button
-            android:text="MY"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:textSize="5pt"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:id="@+id/my_dns_button"/>
+            android:text="DNS Cache"
+            android:id="@+id/dns_cache_display_button"/>
+
         <Button
-            android:text="C"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:textSize="5pt"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:id="@+id/dns_cache_button"/>
+            android:text="Clear Output"
+            android:id="@+id/clear_output_button"/>
 
     </LinearLayout>
 
@@ -102,26 +137,6 @@
             android:id="@+id/result_text" />
 
     </ScrollView>
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_weight="1"
-        android:layout_height="0dp"
-        android:id="@+id/image_scroll_view"
-        android:layout_gravity="center_horizontal" >
-
-        <ImageView
-            android:id="@+id/image_view"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:scaleType="centerInside"
-            android:layout_centerHorizontal="true"
-            android:layout_centerVertical="true"
-            android:layout_marginTop="10sp"
-            android:contentDescription="Image will be here"
-            />
-
-    </ScrollView>
-
 
 
 </LinearLayout>

@@ -118,9 +118,9 @@ public class HTTPRunnable implements Runnable {
 
             sb.append(String.format("  timing for url:%s\n", curURL));
             sb.append(String.format(
-                    "    overall:%dms \n    dns:%dms \n    connSetup:%dms cache: %s  (handshake:%dms, tls:%dms) "
+                    "    overall:%dms \n    dns:%dms (cache:%b) \n    connSetup:%dms cache: %s  (handshake:%dms, tls:%dms) "
                             + "\n    server:%dms \n    resp:%dms (1.reqwrite:%dms 2.TTFB:%dms, 3.respTrans:%dms) ",
-                    overallDelay, dnsDelay, connSetupDelay,String.valueOf(useConnCache),
+                    overallDelay, dnsDelay, timing.useDNSCache(), connSetupDelay,String.valueOf(useConnCache),
                     timing.getHandshakeTimeANP(), tlsConnDelay,
                     timing.getEstimatedServerDelay(), respDelay,
                     reqWriteDelay, TTFB, respTransDelay));

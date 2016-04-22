@@ -10,5 +10,6 @@ public class InternalConst {
         public final static int NETINFO_MSG = 5;
         public final static int USER_NET_UPDATE_MSG = 6;
         public final static int DNS_MSG = 7;
+        public final static int APP_MEASURE_MSG = 8;
     }
 }
